@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>APIKey System - Auth</title>
+
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+
+    body {
+        margin: 0;
+        background: #0d1117;
+        color: #c9d1d9;
+        font-family: "Inter", sans-serif;
+    }
+
+    .wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+
+    .container {
+        width: 420px;
+        background: #161b22;
+        padding: 32px;
+        border-radius: 14px;
+        box-shadow: 0 0 25px rgba(88,166,255,0.18);
+        animation: fadeIn .3s ease;
+    }
+
+    @keyframes fadeIn {
+        from {opacity: 0; transform: translateY(10px);}
+        to {opacity: 1; transform: translateY(0);}
+    }
+
+    h2 {
+        text-align: center;
+        color: #58a6ff;
+        margin-bottom: 20px;
+        font-weight: 600;
+    }
+
+    input, select {
+        width: 100%;
+        padding: 12px;
+        margin: 8px 0;
+        border-radius: 6px;
+        background: #0d1117;
+        border: 1px solid #30363d;
+        color: white;
+        font-size: 14px;
+    }
+
+    button {
+        width: 100%;
+        padding: 12px;
+        margin-top: 8px;
+        border: none;
+        border-radius: 6px;
+        background: #238636;
+        color: white;
+        font-size: 15px;
+        cursor: pointer;
+        transition: 0.2s;
+        font-weight: 600;
+    }
+
+    button:hover { background: #2ea043; }
+
+    .blue-btn { background: #1f6feb; }
+    .blue-btn:hover { background: #388bfd; }
+
+    .switch-link {
+        display: block;
+        text-align: center;
+        margin-top: 15px;
+        color: #58a6ff;
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+    /* alert styles */
+    .alert {
+        padding: 12px;
+        border-radius: 6px;
+        margin-top: 12px;
+        font-size: 14px;
+        line-height: 1.4;
+    }
+
+    .alert-success {
+        background: rgba(35, 134, 54, 0.25);
+        border: 1px solid #238636;
+        color: #48d06f;
+    }
+
+    .alert-error {
+        background: rgba(248, 81, 73, 0.2);
+        border: 1px solid #da3633;
+        color: #ff7b72;
+    }
+</style>
+</head>
+
+<body>
+
+<div class="wrapper">
+
+    <!-- REGISTER BOX -->
+    <div class="container" id="registerBox">
+        <h2>Register</h2>
+
+        <select id="roleSelect">
+            <option value="">-- Choose Role --</option>
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
+        </select>
+
+        <input id="firstname" placeholder="First Name">
+        <input id="lastname" placeholder="Last Name">
+        <input id="email" placeholder="Email">
+
+        <button class="blue-btn" onclick="registerUser()">Register</button>
+
+        <div id="registerResult"></div>
+
+        <span class="switch-link" onclick="switchToLogin()">Already have an account? Login</span>
+    </div>
+
+    <!-- LOGIN BOX -->
+    <div class="container" id="loginBox" style="display:none;">
+        <h2>Login</h2>
+
+        <select id="loginRole">
+            <option value="">-- Login as --</option>
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
+        </select>
+
+        <input id="loginEmail" placeholder="Email">
+
+        <button onclick="login()">Login</button>
+
+        <div id="loginResult"></div>
+
+        <span class="switch-link" onclick="switchToRegister()">Don't have an account? Register</span>
+    </div>
+
+</div>
+
+<script>
+function switchToLogin() {
+    registerBox.style.display = "none";
+    loginBox.style.display = "block";
+}
+
+function switchToRegister() {
+    loginBox.style.display = "none";
+    registerBox.style.display = "block";
+}
+
+// ==========================
+// REGISTER
+// ==========================
+async function registerUser() {
+    const role = roleSelect.value;
+
+    if (!role) {
+        registerResult.innerHTML = `<div class="alert alert-error">❌ Please choose a role first.</div>`;
+        return;
+    }
+
+    let data = {
+        firstname: firstname.value,
+        lastname: lastname.value,
+        email: email.value
+    };
+
+    let endpoint = "";
+
+    if (role === "admin") {
+        endpoint = "/admin/register";
+        data = { email: email.value };
+    } else {
+        endpoint = "/user/register";
+    }
+
+    const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+    });
+
+    const result = await res.json();
+
+    if (!res.ok) {
+    registerResult.innerHTML = `
+        <div style="color:#f85149;">
+            ❌ Registration failed:<br>
+            ${result.message || result.error?.sqlMessage || "Unknown error"}
+        </div>
+    `;
+    return;
+}
+
+registerResult.innerHTML = `
+    <div style="color:#238636;">
+        ✅ Registration success!<br>
+        ${result.message}<br>
+        ${result.apikey ? `<br><b>Your API Key:</b> ${result.apikey}` : ""}
+    </div>
+`;
+
+    }
+
+
+// ==========================
+// LOGIN
+// ==========================
+async function login() {
+    const role = loginRole.value;
+
+    if (!role) {
+        loginResult.innerHTML = `<div class="alert alert-error">❌ Choose login role first.</div>`;
+        return;
+    }
+
+    const endpoint = role === "admin" ? "/admin/login" : "/user/login";
+
+    const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: loginEmail.value })
+    });
+
+    const result = await res.json();
+
+    if (!res.ok) {
+        loginResult.innerHTML = `
+            <div style="color:#f85149;">
+                ❌ Login failed:<br>
+                ${result.message || "Unknown error"}
+            </div>
+        `;
+        return;
+    }
+
+    // 🟢 Simpan role & email biar admin.html bisa tahu bahwa user sudah login
+    localStorage.setItem("role", result.role);
+    localStorage.setItem("email", loginEmail.value);
+
+    loginResult.innerHTML = `
+        <div style="color:#238636;">
+            ✅ Login successful!<br>
+            Logged in as: <b>${result.role}</b><br>
+            ${result.user?.apikey_hash ? `<b>Your API Key Hash:</b> ${result.user.apikey_hash}` : ""}
+        </div>
+    `;
+
+    // 🟢 Jika admin → langsung redirect ke dashboard admin
+    if (result.role === "admin") {
+        setTimeout(() => {
+            window.location.href = "admin.html";
+        }, 1200);
+    }
+}
+</script>
+</body>
+</html>
